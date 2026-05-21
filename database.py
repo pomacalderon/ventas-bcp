@@ -53,6 +53,18 @@ def inicializar_db():
         )
     """)
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS metas (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            matricula_sup   TEXT NOT NULL,
+            tipo            TEXT NOT NULL,
+            valor           REAL NOT NULL,
+            fecha           TEXT NOT NULL,
+            dias_comerciales INTEGER DEFAULT 26,
+            UNIQUE(matricula_sup, tipo, fecha)
+        )
+    """)
+
     conn.commit()
 
     c.execute("SELECT COUNT(*) FROM usuarios")
@@ -130,7 +142,7 @@ def inicializar_db():
 # ── CALCULOS ─────────────────────────────────────────────────────────────────
 
 PUNTOS_FIJOS = {
-    "AMP": 7.0, "UPG": 0.0, "UPG_ACT": 11.0, "TA": 0.0, "SPT": 0.0,
+    "AMP": 7.0, "UPG": 0.0, "UPG_ACT": 11.0, "TA": 7.0, "SPT": 2.0,
 }
 
 def calcular_puntos(campana, monto=0):
@@ -351,17 +363,4 @@ def get_todos_usuarios():
     return rows
 
 
-def get_todas_ventas(fecha=None):
-    if fecha is None:
-        fecha = datetime.now().strftime("%Y-%m-%d")
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute(
-        "SELECT v.*, u.nombre, u.equipo FROM ventas v "
-        "JOIN usuarios u ON v.matricula = u.matricula "
-        "WHERE v.fecha=? ORDER BY v.hora DESC",
-        (fecha,)
-    )
-    rows = [dict(r) for r in c.fetchall()]
-    conn.close()
-    return rows
+def get_todas_
