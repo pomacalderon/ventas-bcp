@@ -292,7 +292,8 @@ def get_resumen_equipo(matricula_sup, fecha=None):
 def get_todos_supervisores():
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM usuarios WHERE rol='supervisor'")
+    # CD 03 y SWAT 03 son equipos no comerciales — se excluyen del ranking
+    c.execute("SELECT * FROM usuarios WHERE rol='supervisor' AND equipo NOT IN ('CD 03', 'SWAT 03')")
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
