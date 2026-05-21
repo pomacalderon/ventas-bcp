@@ -125,3 +125,37 @@ def todas_ventas(fecha: Optional[str] = None):
 @app.get("/historial/equipo/{matricula_sup}")
 def historial_equipo(matricula_sup: str, fecha_ini: str, fecha_fin: str):
     return db.get_historial_equipo(matricula_sup, fecha_ini, fecha_fin)
+
+
+# ── METAS ────────────────────────────────────────────────────────────────────
+
+class MetaRequest(BaseModel):
+    matricula_sup: str
+    tipo: str           # 'diaria' o 'mensual'
+    valor: float
+    fecha: str
+    dias_comerciales: int = 26
+
+@app.get("/metas/{matricula_sup}")
+def get_metas(matricula_sup: str, tipo: str, fecha: str):
+    meta = db.get_meta(matricula_sup, tipo, fecha)
+    return meta if meta else {"valor": 0, "dias_comerciales": 26}
+
+@app.post("/metas")
+def guardar_meta(req: MetaRequest):
+    db.set_meta(req.matricula_sup, req.tipo, req.valor, req.fecha, req.dias_comerciales)
+    return {"ok": True}
+
+
+# ── SIN VENDER ───────────────────────────────────────────────────────────────
+
+@app.get("/sinvender/{matricula_sup}")
+def sin_vender(matricula_sup: str):
+    return db.get_sin_vender(matricula_sup)
+
+
+# ── EVOLUTIVO ────────────────────────────────────────────────────────────────
+
+@app.get("/evolutivo/{matricula_sup}")
+def evolutivo(matricula_sup: str, dias: int = 30):
+    return db.get_evolutivo(matricula_sup, dias)
