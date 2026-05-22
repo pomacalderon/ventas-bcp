@@ -1,14 +1,13 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, date as date_type
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH  = os.path.join(BASE_DIR, "ventas.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 
@@ -28,7 +27,7 @@ def inicializar_db():
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS ventas (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            id          SERIAL PRIMARY KEY,
             matricula   TEXT NOT NULL,
             campana     TEXT NOT NULL,
             monto       REAL DEFAULT 0,
@@ -41,7 +40,7 @@ def inicializar_db():
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS notificaciones (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            id              SERIAL PRIMARY KEY,
             matricula_sup   TEXT NOT NULL,
             matricula_as    TEXT NOT NULL,
             nombre_as       TEXT NOT NULL,
@@ -55,7 +54,7 @@ def inicializar_db():
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS metas (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            id              SERIAL PRIMARY KEY,
             matricula_sup   TEXT NOT NULL,
             tipo            TEXT NOT NULL,
             valor           REAL NOT NULL,
@@ -68,7 +67,8 @@ def inicializar_db():
     conn.commit()
 
     c.execute("SELECT COUNT(*) FROM usuarios")
-    if c.fetchone()[0] == 0:
+    count = c.fetchone()[0]
+    if count == 0:
         usuarios = [
             ("T49493", "Esteban Poma Calderon",                "moderador", None,    None),
             ("S11243", "Gabriela Hutchins",                    "gerente",   None,    "Gerencia"),
@@ -134,7 +134,7 @@ def inicializar_db():
             ("T75571", "Sandoval Zapata Daniel Junior",        "asesor", "T44499", "INB 38"),
             ("T75572", "Zegarra Mantilla Marisol Grecia",      "asesor", "T44499", "INB 38"),
         ]
-        c.executemany("INSERT INTO usuarios VALUES (?,?,?,?,?)", usuarios)
+        c.executemany("INSERT INTO usuarios VALUES (%s,%s,%s,%s,%s)", usuarios)
         conn.commit()
     conn.close()
 
@@ -157,8 +157,8 @@ def calcular_puntos(campana, monto=0):
 
 def login(matricula):
     conn = get_conn()
-    c = conn.cursor()
-    c.execute("SELECT * FROM usuarios WHERE matricula=?", (matricula,))
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c.execute("SELECT * FROM usuarios WHERE matricula=%s", (matricula,))
     row = c.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -169,16 +169,16 @@ def registrar_venta(matricula, campana, monto=0):
     hoy  = datetime.now().strftime("%Y-%m-%d")
     hora = datetime.now().strftime("%H:%M")
     conn = get_conn()
-    conn.execute(
-        "INSERT INTO ventas (matricula,campana,monto,puntos,fecha,hora) VALUES (?,?,?,?,?,?)",
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c.execute(
+        "INSERT INTO ventas (matricula,campana,monto,puntos,fecha,hora) VALUES (%s,%s,%s,%s,%s,%s)",
         (matricula, campana, monto, puntos, hoy, hora)
     )
-    c = conn.cursor()
-    c.execute("SELECT nombre, supervisor FROM usuarios WHERE matricula=?", (matricula,))
+    c.execute("SELECT nombre, supervisor FROM usuarios WHERE matricula=%s", (matricula,))
     row = c.fetchone()
     if row and row["supervisor"]:
-        conn.execute(
-            "INSERT INTO notificaciones (matricula_sup,matricula_as,nombre_as,campana,puntos,fecha,hora) VALUES (?,?,?,?,?,?,?)",
+        c.execute(
+            "INSERT INTO notificaciones (matricula_sup,matricula_as,nombre_as,campana,puntos,fecha,hora) VALUES (%s,%s,%s,%s,%s,%s,%s)",
             (row["supervisor"], matricula, row["nombre"], campana, puntos, hoy, hora)
         )
     conn.commit()
@@ -188,15 +188,17 @@ def registrar_venta(matricula, campana, monto=0):
 
 def anular_venta(venta_id):
     conn = get_conn()
-    conn.execute("UPDATE ventas SET estado='anulado' WHERE id=?", (venta_id,))
+    c = conn.cursor()
+    c.execute("UPDATE ventas SET estado='anulado' WHERE id=%s", (venta_id,))
     conn.commit()
     conn.close()
 
 
 def editar_venta(venta_id, nueva_campana, nuevo_monto, nuevos_puntos):
     conn = get_conn()
-    conn.execute(
-        "UPDATE ventas SET campana=?, monto=?, puntos=?, estado='activo' WHERE id=?",
+    c = conn.cursor()
+    c.execute(
+        "UPDATE ventas SET campana=%s, monto=%s, puntos=%s, estado='activo' WHERE id=%s",
         (nueva_campana, nuevo_monto, nuevos_puntos, venta_id)
     )
     conn.commit()
@@ -205,13 +207,13 @@ def editar_venta(venta_id, nueva_campana, nuevo_monto, nuevos_puntos):
 
 def get_notificaciones(matricula_sup, solo_hoy=True):
     conn = get_conn()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     if solo_hoy:
         hoy = datetime.now().strftime("%Y-%m-%d")
-        c.execute("SELECT * FROM notificaciones WHERE matricula_sup=? AND fecha=? ORDER BY id DESC",
+        c.execute("SELECT * FROM notificaciones WHERE matricula_sup=%s AND fecha=%s ORDER BY id DESC",
                   (matricula_sup, hoy))
     else:
-        c.execute("SELECT * FROM notificaciones WHERE matricula_sup=? ORDER BY id DESC LIMIT 50",
+        c.execute("SELECT * FROM notificaciones WHERE matricula_sup=%s ORDER BY id DESC LIMIT 50",
                   (matricula_sup,))
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
@@ -220,10 +222,10 @@ def get_notificaciones(matricula_sup, solo_hoy=True):
 
 def get_notificaciones_nuevas(matricula_sup, ultimo_id):
     conn = get_conn()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     hoy = datetime.now().strftime("%Y-%m-%d")
     c.execute(
-        "SELECT * FROM notificaciones WHERE matricula_sup=? AND fecha=? AND id > ? ORDER BY id ASC",
+        "SELECT * FROM notificaciones WHERE matricula_sup=%s AND fecha=%s AND id > %s ORDER BY id ASC",
         (matricula_sup, hoy, ultimo_id)
     )
     rows = [dict(r) for r in c.fetchall()]
@@ -233,7 +235,8 @@ def get_notificaciones_nuevas(matricula_sup, ultimo_id):
 
 def marcar_leidas(matricula_sup):
     conn = get_conn()
-    conn.execute("UPDATE notificaciones SET leida=1 WHERE matricula_sup=?", (matricula_sup,))
+    c = conn.cursor()
+    c.execute("UPDATE notificaciones SET leida=1 WHERE matricula_sup=%s", (matricula_sup,))
     conn.commit()
     conn.close()
 
@@ -242,9 +245,9 @@ def get_ventas_asesor(matricula, fecha=None):
     if fecha is None:
         fecha = datetime.now().strftime("%Y-%m-%d")
     conn = get_conn()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     c.execute(
-        "SELECT id,campana,monto,puntos,hora FROM ventas WHERE matricula=? AND fecha=? AND estado='activo' ORDER BY hora",
+        "SELECT id,campana,monto,puntos,hora FROM ventas WHERE matricula=%s AND fecha=%s AND estado='activo' ORDER BY hora",
         (matricula, fecha)
     )
     rows = [dict(r) for r in c.fetchall()]
@@ -256,9 +259,9 @@ def get_ventas_asesor_con_anuladas(matricula, fecha=None):
     if fecha is None:
         fecha = datetime.now().strftime("%Y-%m-%d")
     conn = get_conn()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     c.execute(
-        "SELECT id,campana,monto,puntos,hora,estado FROM ventas WHERE matricula=? AND fecha=? ORDER BY hora",
+        "SELECT id,campana,monto,puntos,hora,estado FROM ventas WHERE matricula=%s AND fecha=%s ORDER BY hora",
         (matricula, fecha)
     )
     rows = [dict(r) for r in c.fetchall()]
@@ -281,8 +284,8 @@ def get_resumen_asesor(matricula, fecha=None):
 
 def get_equipo_de_supervisor(matricula_sup):
     conn = get_conn()
-    c = conn.cursor()
-    c.execute("SELECT * FROM usuarios WHERE supervisor=?", (matricula_sup,))
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c.execute("SELECT * FROM usuarios WHERE supervisor=%s", (matricula_sup,))
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
@@ -303,8 +306,7 @@ def get_resumen_equipo(matricula_sup, fecha=None):
 
 def get_todos_supervisores():
     conn = get_conn()
-    c = conn.cursor()
-    # CD 03 y SWAT 03 son equipos no comerciales — se excluyen del ranking
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     c.execute("SELECT * FROM usuarios WHERE rol='supervisor' AND equipo NOT IN ('CD 03', 'SWAT 03')")
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
@@ -331,17 +333,17 @@ def get_resumen_gerencia(fecha=None):
 
 
 def get_historial_equipo(matricula_sup, fecha_ini, fecha_fin):
-    equipo  = get_equipo_de_supervisor(matricula_sup)
+    equipo     = get_equipo_de_supervisor(matricula_sup)
     matriculas = [a["matricula"] for a in equipo]
     nombres    = {a["matricula"]: a["nombre"] for a in equipo}
     if not matriculas:
         return []
-    placeholders = ",".join("?" * len(matriculas))
+    placeholders = ",".join(["%s"] * len(matriculas))
     conn = get_conn()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     c.execute(
         f"SELECT id,matricula,campana,monto,puntos,fecha,hora,estado FROM ventas "
-        f"WHERE matricula IN ({placeholders}) AND fecha BETWEEN ? AND ? AND estado='activo' "
+        f"WHERE matricula IN ({placeholders}) AND fecha BETWEEN %s AND %s AND estado='activo' "
         f"ORDER BY fecha,hora,matricula",
         matriculas + [fecha_ini, fecha_fin]
     )
@@ -356,11 +358,128 @@ def get_historial_equipo(matricula_sup, fecha_ini, fecha_fin):
 
 def get_todos_usuarios():
     conn = get_conn()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     c.execute("SELECT * FROM usuarios ORDER BY rol, equipo, nombre")
     rows = [dict(r) for r in c.fetchall()]
     conn.close()
     return rows
 
 
-def get_todas_
+def get_todas_ventas(fecha=None):
+    if fecha is None:
+        fecha = datetime.now().strftime("%Y-%m-%d")
+    conn = get_conn()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c.execute(
+        "SELECT v.*, u.nombre, u.equipo FROM ventas v "
+        "JOIN usuarios u ON v.matricula = u.matricula "
+        "WHERE v.fecha=%s ORDER BY v.hora DESC",
+        (fecha,)
+    )
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return rows
+
+
+# ── METAS ────────────────────────────────────────────────────────────────────
+
+def get_meta(matricula_sup, tipo, fecha):
+    conn = get_conn()
+    c = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    c.execute("SELECT * FROM metas WHERE matricula_sup=%s AND tipo=%s AND fecha=%s",
+              (matricula_sup, tipo, fecha))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def set_meta(matricula_sup, tipo, valor, fecha, dias_comerciales=26):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO metas (matricula_sup,tipo,valor,fecha,dias_comerciales) VALUES (%s,%s,%s,%s,%s) "
+        "ON CONFLICT(matricula_sup,tipo,fecha) DO UPDATE SET valor=EXCLUDED.valor, "
+        "dias_comerciales=EXCLUDED.dias_comerciales",
+        (matricula_sup, tipo, valor, fecha, dias_comerciales)
+    )
+    conn.commit()
+    conn.close()
+
+
+# ── SIN VENDER ───────────────────────────────────────────────────────────────
+
+def get_sin_vender(matricula_sup):
+    equipo = get_equipo_de_supervisor(matricula_sup)
+    hoy    = datetime.now().strftime("%Y-%m-%d")
+    ahora  = datetime.now()
+    conn   = get_conn()
+    c      = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    resultado = []
+
+    for asesor in equipo:
+        c.execute(
+            "SELECT hora FROM ventas WHERE matricula=%s AND fecha=%s AND estado='activo' "
+            "ORDER BY hora DESC LIMIT 1",
+            (asesor["matricula"], hoy)
+        )
+        row = c.fetchone()
+
+        if row:
+            ultima_hora = row["hora"]
+            h, m = map(int, ultima_hora.split(":"))
+            ultima_dt = ahora.replace(hour=h, minute=m, second=0, microsecond=0)
+            if ultima_dt > ahora:
+                ultima_dt -= timedelta(hours=24)
+            minutos = int((ahora - ultima_dt).total_seconds() / 60)
+        else:
+            inicio  = ahora.replace(hour=8, minute=0, second=0, microsecond=0)
+            if ahora < inicio:
+                inicio = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+            minutos = int((ahora - inicio).total_seconds() / 60)
+            ultima_hora = None
+
+        if minutos < 30:     nivel = "normal"
+        elif minutos < 60:   nivel = "atencion"
+        elif minutos < 120:  nivel = "alerta"
+        else:                nivel = "critico"
+
+        resultado.append({
+            "matricula":    asesor["matricula"],
+            "nombre":       asesor["nombre"],
+            "ultima_venta": ultima_hora,
+            "minutos":      minutos,
+            "nivel":        nivel,
+            "tiene_ventas": row is not None
+        })
+
+    conn.close()
+    resultado.sort(key=lambda x: x["minutos"], reverse=True)
+    return resultado
+
+
+# ── EVOLUTIVO ────────────────────────────────────────────────────────────────
+
+def get_evolutivo(matricula_sup, dias=30):
+    equipo     = get_equipo_de_supervisor(matricula_sup)
+    matriculas = [a["matricula"] for a in equipo]
+    if not matriculas:
+        return []
+
+    hoy          = date_type.today()
+    placeholders = ",".join(["%s"] * len(matriculas))
+    conn         = get_conn()
+    c            = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    resultado    = []
+
+    for i in range(dias - 1, -1, -1):
+        dia = (hoy - timedelta(days=i)).strftime("%Y-%m-%d")
+        c.execute(
+            f"SELECT COALESCE(SUM(puntos),0) as total FROM ventas "
+            f"WHERE matricula IN ({placeholders}) AND fecha=%s AND estado='activo'",
+            matriculas + [dia]
+        )
+        row = c.fetchone()
+        resultado.append({"fecha": dia, "total": round(float(row["total"]), 2)})
+
+    conn.close()
+    return resultado
