@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventas BCP</title>
+<style>
+  /* ── RESET & BASE ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --azul:       #003DA5;
+    --azul2:      #0057C8;
+    --azul3:      #1a6be8;
+    --blanco:     #FFFFFF;
+    --gris-bg:    #F0F4FB;
+    --gris-card:  #FFFFFF;
+    --gris-borde: #D8E2F3;
+    --texto:      #0A1628;
+    --texto2:     #5A6A8A;
+    --verde:      #00A86B;
+    --naranja:    #F5A623;
+    --rojo:       #E63946;
+    --radio:      10px;
+    --sombra:     0 2px 12px rgba(0,61,165,.10);
+  }
+  html, body {
+    height: 100%;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--gris-bg);
+    color: var(--texto);
+  }
+
+  /* ── UTILIDADES ──────────────────────────────────────────── */
+  .hidden { display: none !important; }
+  .flex   { display: flex; }
+  .col    { flex-direction: column; }
+  .center { align-items: center; justify-content: center; }
+  .gap8   { gap: 8px; }
+  .gap12  { gap: 12px; }
+  .w100   { width: 100%; }
+
+  /* ── LOGIN ───────────────────────────────────────────────── */
+  #screen-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #001f6b 0%, #003DA5 50%, #0057C8 100%);
+  }
+  .login-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 44px 40px 36px;
+    width: 340px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    text-align: center;
+  }
+  .login-logo {
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--azul);
+    letter-spacing: -2px;
+    margin-bottom: 4px;
+  }
+  .login-sub {
+    font-size: 13px;
+    color: var(--texto2);
+    margin-bottom: 28px;
+  }
+  .login-card label {
+    display: block;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--texto2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .login-card input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--gris-borde);
+    border-radius: 8px;
+    font-size: 16px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: 600;
+    color: var(--azul);
+    outline: none;
+    transition: border-color .2s;
+    text-transform: uppercase;
+  }
+  .login-card input:focus { border-color: var(--azul); }
+  .btn-login {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: var(--azul);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: .5px;
+    transition: background .2s, transform .1s;
+  }
+  .btn-login:hover  { background: var(--azul2); }
+  .btn-login:active { transform: scale(.98); }
+  .login-error {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--rojo);
+    font-weight: 600;
+  }
+
+  /* ── APP SHELL ───────────────────────────────────────────── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+
+  /* TOPBAR */
+  .topbar {
+    background: var(--azul);
+    color: #fff;
+    padding: 0 20px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  }
+  .topbar-left { display: flex; align-items: center; gap: 14px; }
+  .topbar-brand { font-size: 22px; font-weight: 900; letter-spacing: -1px; }
+  .topbar-user  { font-size: 13px; opacity: .85; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .topbar-time  { font-size: 12px; opacity: .7; }
+  .btn-salir {
+    background: rgba(255,255,255,.15);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .btn-salir:hover { background: rgba(255,255,255,.28); }
+
+  /* CONTENIDO */
+  .app-body { flex: 1; overflow-y: auto; }
+
+  /* ── TABS ────────────────────────────────────────────────── */
+  .tabs-bar {
+    display: flex;
+    background: var(--blanco);
+    border-bottom: 2px solid var(--gris-borde);
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 14px 20px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto2);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  .tab-btn.active { color: var(--azul); border-bottom-color: var(--azul); }
+  .tab-btn:hover:not(.active) { color: var(--texto); }
+  .tab-content { display: none; padding: 20px; }
+  .tab-content.active { display: block; }
+
+  /* ── CARDS ───────────────────────────────────────────────── */
+  .card {
+    background: var(--gris-card);
+    border-radius: var(--radio);
+    box-shadow: var(--sombra);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-azul {
+    background: linear-gradient(135deg, var(--azul), var(--azul3));
+    color: #fff;
+    border-radius: var(--radio);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card-azul .pts-label { font-size: 12px; opacity: .75; margin-bottom: 2px; }
+  .card-azul .pts-valor { font-size: 36px; font-weight: 800; line-height: 1; }
+  .card-azul .pts-equipo { font-size: 12px; opacity: .7; margin-top: 4px; }
+
+  /* ── BADGES DE CAMPAÑA ───────────────────────────────────── */
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--gris-borde);
+    color: var(--texto2);
+  }
+  .badge.activo { color: #fff; }
+
+  /* ── BOTONES CAMPAÑA ─────────────────────────────────────── */
+  .campana-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .campana-grid2 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .btn-campana {
+    padding: 14px 8px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    transition: filter .15s, transform .1s;
+    letter-spacing: .3px;
+  }
+  .btn-campana:hover  { filter: brightness(1.12); }
+  .btn-campana:active { transform: scale(.96); }
+
+  /* ── TABLA ───────────────────────────────────────────────── */
+  .tabla-wrap { overflow-x: auto; border-radius: 8px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--azul);
+    color: #fff;
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .3px;
+  }
+  tbody tr { border-bottom: 1px solid var(--gris-borde); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f0f5ff; }
+  tbody td {
+    padding: 10px 12px;
+    text-align: center;
+    color: var(--texto);
+    font-size: 13px;
+  }
+  .anulado td { color: #aaa; text-decoration: line-through; background: #fafafa; }
+  .lider-row td { background: #e8f5e9; font-weight: 700; }
+  .sin-venta-row td { background: #fff8e1; }
+
+  /* ── NOTIFICACIONES ──────────────────────────────────────── */
+  .notif-card {
+    background: #EEF4FF;
+    border-left: 4px solid var(--azul2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .notif-card.leida { background: var(--gris-bg); border-left-color: var(--gris-borde); opacity: .75; }
+  .notif-hora { font-size: 11px; color: var(--texto2); }
+  .notif-nombre { font-weight: 700; font-size: 14px; }
+  .notif-campana {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    margin-top: 4px;
+  }
+
+  /* ── FORMULARIOS ─────────────────────────────────────────── */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--texto2); margin-bottom: 5px; }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--gris-borde);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--azul); }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter .15s;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn-primary { background: var(--azul); color: #fff; }
+  .btn-danger  { background: var(--rojo); color: #fff; }
+  .btn-success { background: var(--verde); color: #fff; }
+  .btn-warn    { background: var(--naranja); color: #fff; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+  /* ── EQUIPO CARDS (supervisor) ───────────────────────────── */
+  .equipo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .equipo-card {
+    background: #fff;
+    border: 2px solid var(--gris-borde);
+    border-radius: 10px;
+    padding: 14px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .equipo-card:hover { border-color: var(--azul2); box-shadow: var(--sombra); }
+  .equipo-card .ec-nombre { font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--texto); }
+  .equipo-card .ec-pts { font-size: 22px; font-weight: 800; color: var(--azul); }
+  .equipo-card .ec-detalle { font-size: 11px; color: var(--texto2); margin-top: 4px; }
+
+  /* ── ALERTA FLASH ────────────────────────────────────────── */
+  .alerta-flash {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background: var(--azul);
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 9999;
+    animation: slideIn .3s ease;
+    max-width: 320px;
+  }
+  .alerta-flash.error { background: var(--rojo); }
+  .alerta-flash.ok    { background: var(--verde); }
+  @keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  /* ── TOTALES BAR ─────────────────────────────────────────── */
+  .totales-bar {
+    background: var(--azul);
+    color: #fff;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .totales-bar span { opacity: .85; font-weight: 500; }
+
+  /* ── GERENCIA ────────────────────────────────────────────── */
+  .gerencia-equipo {
+    background: #fff;
+    border-radius: 10px;
+    border: 2px solid var(--gris-borde);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .gerencia-header {
+    background: var(--azul);
+    color: #fff;
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .gerencia-header .g-equipo { font-size: 15px; font-weight: 700; }
+  .gerencia-header .g-pts    { font-size: 18px; font-weight: 800; }
+  .gerencia-header .g-sup    { font-size: 12px; opacity: .8; }
+
+  /* ── MODAL ───────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 28px;
+    width: 360px;
+    max-width: 95vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .modal-box h3 { font-size: 18px; color: var(--azul); margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+
+  /* ── LOADING ─────────────────────────────────────────────── */
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 3px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── SECCION TITULO ──────────────────────────────────────── */
+  .sec-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--texto2);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 10px;
+  }
+
+  /* ── RESPONSIVE ──────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .campana-grid  { grid-template-columns: repeat(2, 1fr); }
+    .campana-grid2 { grid-template-columns: repeat(3, 1fr); }
+    .equipo-grid   { grid-template-columns: 1fr 1fr; }
+    .tab-btn       { padding: 12px 12px; font-size: 12px; }
+  }
+
+  /* ── PROGRESO META ───────────────────────────────────────── */
+  .meta-bar-wrap {
+    background: rgba(255,255,255,.2);
+    border-radius: 20px;
+    height: 8px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .meta-bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    background: #fff;
+    transition: width .5s ease;
+  }
+  .meta-label {
+    font-size: 11px;
+    opacity: .8;
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── TIMING CARD ─────────────────────────────────────────── */
+  .timing-card {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .timing-card.en-timing    { background: linear-gradient(135deg,#00A86B,#007a4d); }
+  .timing-card.fuera-timing { background: linear-gradient(135deg,#E63946,#b02030); }
+  .timing-card.sin-meta     { background: linear-gradient(135deg,#5A6A8A,#3d4f6e); }
+  .timing-pct  { font-size: 36px; font-weight: 900; line-height: 1; }
+  .timing-desc { font-size: 12px; opacity: .85; margin-top: 2px; }
+  .timing-badge {
+    background: rgba(255,255,255,.25);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  /* ── META INPUT ROW ──────────────────────────────────────── */
+  .meta-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .meta-row .form-group { margin: 0; flex: 1; min-width: 120px; }
+  .meta-row .form-group input {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  /* ── SIN VENDER PANEL ────────────────────────────────────── */
+  .sv-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 5px solid;
+  }
+  .sv-item.normal   { background: #f0fff8; border-color: #00A86B; }
+  .sv-item.atencion { background: #fffbf0; border-color: #F5A623; }
+  .sv-item.alerta   { background: #fff4e0; border-color: #f07030; }
+  .sv-item.critico  { background: #fff0f0; border-color: #E63946; }
+  .sv-nombre   { font-weight: 700; font-size: 14px; }
+  .sv-detalle  { font-size: 12px; color: var(--texto2); margin-top: 2px; }
+  .sv-tiempo   { font-size: 22px; font-weight: 800; text-align: right; }
+  .sv-tiempo small { display: block; font-size: 11px; font-weight: 400; color: var(--texto2); }
+  .sv-nivel-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: #fff;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .sv-normal   { background: #00A86B; }
+  .sv-atencion { background: #F5A623; }
+  .sv-alerta   { background: #f07030; }
+  .sv-critico  { background: #E63946; }
+
+  /* ── EQUIPO CARD (con rojo) ───────────────────────────────── */
+  .equipo-card.sin-ventas {
+    border-color: #E63946;
+    background: #fff5f5;
+  }
+  .equipo-card.sin-ventas .ec-pts { color: #E63946; }
+  .row-sin-venta td { background: #fff0f0 !important; color: #c0003a !important; }
+
+  /* ── VISTA COMPACTA ──────────────────────────────────────── */
+  #compacto {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #003DA5, #0057C8);
+    color: #fff;
+    border-radius: 14px;
+    padding: 14px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    z-index: 8000;
+    cursor: pointer;
+    min-width: 160px;
+    display: none;
+    transition: transform .2s;
+  }
+  #compacto:hover { transform: scale(1.04); }
+  #compacto .cp-pts { font-size: 24px; font-weight: 900; }
+  #compacto .cp-nombre { font-size: 11px; opacity: .75; margin-bottom: 2px; }
+  #compacto .cp-ultima { font-size: 11px; opacity: .8; margin-top: 4px; }
+  .btn-compacto {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,61,165,.15);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--azul);
+    cursor: pointer;
+    z-index: 100;
+  }
+
+  /* ── MINI TIMING CARDS (asesor) ──────────────────────────── */
+  .timing-mini-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .timing-mini {
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #fff;
+    min-height: 80px;
+  }
+  .timing-mini.en    { background: linear-gradient(135deg,#00A86B,#007a4d); }
+  .timing-mini.fuera { background: linear-gradient(135deg,#E63946,#b02030); }
+  .timing-mini.gris  { background: linear-gradient(135deg,#5A6A8A,#3d4f6e); }
+  .timing-mini-label { font-size: 10px; opacity:.75; text-transform:uppercase; letter-spacing:.5px; }
+  .timing-mini-valor { font-size: 20px; font-weight: 900; margin: 4px 0 2px; }
+  .timing-mini-sub   { font-size: 10px; opacity:.8; }
+
+  /* ── META MES BAR (asesor) ─────────────────────────────── */
+  .meta-mes-wrap {
+    background: rgba(255,255,255,.2);
+    border-radius: 20px;
+    height: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .meta-mes-fill {
+    height: 100%;
+    border-radius: 20px;
+    background: rgba(255,255,255,.7);
+    transition: width .5s ease;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  PANTALLA LOGIN                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">BCP</div>
+    <div class="login-sub">Sistema de Registro de Ventas</div>
+    <label for="inp-matricula">Matrícula</label>
+    <input id="inp-matricula" type="text" placeholder="Ej: T49493" autocomplete="off"
+           maxlength="8" style="margin-bottom:0">
+    <button class="btn-login" id="btn-ingresar">INGRESAR</button>
+    <div class="login-error hidden" id="login-error"></div>
+    <div style="margin-top:16px;font-size:11px;color:#aaa;">v2.0 Web — Ventas BCP</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  APP PRINCIPAL                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-brand">BCP</div>
+      <div class="topbar-user" id="topbar-user">—</div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-time" id="topbar-time">—</div>
+      <button class="btn-salir" id="btn-salir">Salir</button>
+    </div>
+  </div>
+
+  <!-- TABS BAR (se llena dinámicamente) -->
+  <div class="tabs-bar" id="tabs-bar"></div>
+
+  <!-- CUERPO -->
+  <div class="app-body" id="app-body"></div>
+</div>
+
+<!-- VISTA COMPACTA FLOTANTE -->
+<div id="compacto" onclick="desactivarCompacto()" title="Clic para expandir">
+  <div class="cp-nombre" id="cp-nombre">—</div>
+  <div class="cp-pts" id="cp-pts">0.0 pts</div>
+  <div class="cp-ultima" id="cp-ultima">—</div>
+</div>
+
+<!-- MODAL MONTO -->
+<div class="modal-overlay hidden" id="modal-monto">
+  <div class="modal-box">
+    <h3 id="modal-titulo">Ingresar monto</h3>
+    <div class="form-group">
+      <label>Monto (S/)</label>
+      <input type="number" id="modal-monto-inp" min="0" step="0.01" placeholder="0.00">
+    </div>
+    <div class="modal-btns">
+      <button class="btn" id="modal-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="modal-confirmar">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR VENTA (supervisor/moderador) -->
+<div class="modal-overlay hidden" id="modal-editar">
+  <div class="modal-box">
+    <h3>Editar Venta</h3>
+    <div class="form-group">
+      <label>Campaña</label>
+      <select id="edit-campana">
+        <option>AMP</option><option>UPG</option><option>PTC</option>
+        <option>BT</option><option>UPG_ACT</option><option>TA</option><option>SPT</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Monto (S/)</label>
+      <input type="number" id="edit-monto" min="0" step="0.01" value="0">
+    </div>
+    <div class="form-group">
+      <label>Puntos</label>
+      <input type="number" id="edit-puntos" min="0" step="0.01" value="0">
+    </div>
+    <div class="modal-btns">
+      <button class="btn" id="edit-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="edit-confirmar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIGURACIÓN — CAMBIA ESTA URL POR LA DE TU SERVIDOR EN RENDER
+// ═══════════════════════════════════════════════════════════════════
+const API = "https://ventas-bcp.onrender.com";
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONSTANTES
+// ═══════════════════════════════════════════════════════════════════
+const COLORES = {
+  AMP:"#003DA5", UPG:"#7B2D8B", PTC:"#00A86B",
+  BT:"#E63946",  UPG_ACT:"#F5A623", TA:"#0099CC", SPT:"#666699"
+};
+const TODAS = ["AMP","UPG","PTC","BT","UPG_ACT","TA","SPT"];
+const PROACTIVAS  = ["AMP","UPG","PTC","BT"];
+const REACTIVAS   = ["UPG_ACT","TA","SPT"];
+const CON_MONTO   = ["PTC","BT"];
+const PUNTOS_FIJOS = { AMP:7, UPG:0, UPG_ACT:11, TA:7, SPT:2 };
+let _modoCompacto = false;
+
+let USUARIO = null;
+let _timerReloj = null;
+let _timerRefresh = null;
+let _timerNotif = null;
+let _ultimoNotifId = 0;
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILIDADES
+// ═══════════════════════════════════════════════════════════════════
+async function api(path, method="GET", body=null) {
+  const opts = { method, headers: {"Content-Type":"application/json"} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({detail:"Error de conexión"}));
+    throw new Error(err.detail || "Error");
+  }
+  return res.json();
+}
+
+function flash(msg, tipo="ok") {
+  const el = document.createElement("div");
+  el.className = `alerta-flash ${tipo}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function fechaHoy() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function formatHora() {
+  return new Date().toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+}
+
+function formatFecha() {
+  return new Date().toLocaleDateString("es-PE",{day:"2-digit",month:"2-digit",year:"numeric"});
+}
+
+function calcPuntosLocal(campana, monto=0) {
+  if (campana === "PTC") return +(monto * 0.0021).toFixed(2);
+  if (campana === "BT")  return +(monto * 0.0013).toFixed(2);
+  return PUNTOS_FIJOS[campana] ?? 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RELOJ
+// ═══════════════════════════════════════════════════════════════════
+function iniciarReloj() {
+  const el = document.getElementById("topbar-time");
+  function tick() {
+    el.textContent = formatHora() + "  " + formatFecha();
+  }
+  tick();
+  _timerReloj = setInterval(tick, 10000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById("btn-ingresar").onclick = doLogin;
+document.getElementById("inp-matricula").addEventListener("keydown", e => {
+  if (e.key === "Enter") doLogin();
+});
+
+async function doLogin() {
+  const mat = document.getElementById("inp-matricula").value.trim().toUpperCase();
+  const errEl = document.getElementById("login-error");
+  errEl.classList.add("hidden");
+  if (!mat) { errEl.textContent="Ingresa tu matrícula"; errEl.classList.remove("hidden"); return; }
+  const btn = document.getElementById("btn-ingresar");
+  btn.innerHTML = '<span class="spinner"></span> Entrando...';
+  btn.disabled = true;
+  try {
+    USUARIO = await api("/login", "POST", {matricula: mat});
+    iniciarApp();
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.innerHTML = "INGRESAR";
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INICIAR APP
+// ═══════════════════════════════════════════════════════════════════
+function iniciarApp() {
+  document.getElementById("screen-login").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("topbar-user").textContent =
+    `${USUARIO.nombre.split(" ")[0]}  ·  ${USUARIO.rol.toUpperCase()}`;
+  iniciarReloj();
+
+  const rol = USUARIO.rol;
+  if (rol === "asesor")     montarAsesor();
+  else if (rol === "supervisor") montarSupervisor();
+  else if (rol === "gerente")   montarGerencia();
+  else if (rol === "moderador") montarModerador();
+
+  document.getElementById("btn-salir").onclick = () => {
+    clearInterval(_timerReloj);
+    clearInterval(_timerRefresh);
+    clearInterval(_timerNotif);
+    location.reload();
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  VISTA COMPACTA
+// ═══════════════════════════════════════════════════════════════════
+function activarCompacto() {
+  _modoCompacto = true;
+  document.getElementById("app").style.display = "none";
+  const cp = document.getElementById("compacto");
+  cp.style.display = "block";
+  const nombre = USUARIO ? USUARIO.nombre.split(" ")[0] : "—";
+  document.getElementById("cp-nombre").textContent = nombre + " · " + (USUARIO?.equipo || "");
+  const ptsEl = document.getElementById("a-pts");
+  document.getElementById("cp-pts").textContent = ptsEl ? ptsEl.textContent : "— pts";
+}
+
+function desactivarCompacto() {
+  _modoCompacto = false;
+  document.getElementById("compacto").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+}
+
+function actualizarCompacto(pts, ultimaCampana) {
+  if (!_modoCompacto) return;
+  document.getElementById("cp-pts").textContent = pts.toFixed(1) + " pts";
+  if (ultimaCampana) document.getElementById("cp-ultima").textContent = "Última: " + ultimaCampana;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TIMING COMERCIAL
+// ═══════════════════════════════════════════════════════════════════
+function calcularTiming(puntosActuales, metaMensual, diasComerciales) {
+  if (!metaMensual || metaMensual === 0) return null;
+  const hoy = new Date();
+  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  let diasTranscurridos = 0;
+  const cursor = new Date(inicioMes);
+  while (cursor <= hoy) {
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) diasTranscurridos++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  diasTranscurridos = Math.min(diasTranscurridos, diasComerciales);
+  const timingEsperado   = (diasTranscurridos / diasComerciales) * metaMensual;
+  const porcentajeActual = (puntosActuales / metaMensual) * 100;
+  const porcentajeEsperado = (diasTranscurridos / diasComerciales) * 100;
+  const diferencia = puntosActuales - timingEsperado;
+  return {
+    diasTranscurridos,
+    diasComerciales,
+    timingEsperado: Math.round(timingEsperado * 10) / 10,
+    porcentajeActual: Math.round(porcentajeActual * 10) / 10,
+    porcentajeEsperado: Math.round(porcentajeEsperado * 10) / 10,
+    diferencia: Math.round(diferencia * 10) / 10,
+    enTiming: puntosActuales >= timingEsperado
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GRÁFICOS CANVAS
+// ═══════════════════════════════════════════════════════════════════
+function dibujarBarras(canvas, data, metaDiaria) {
+  if (!canvas || !data.length) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const n = data.length;
+  const barH = Math.min(28, Math.floor((H - 30) / n) - 6);
+  const maxVal = Math.max(...data.map(d => d.total_puntos), metaDiaria || 1, 1);
+  const startX = 140, endX = W - 50;
+  const chartW = endX - startX;
+  data.forEach((d, i) => {
+    const y = 10 + i * (barH + 8);
+    const barW = Math.max(0, (d.total_puntos / maxVal) * chartW);
+    const nombre = d.nombre.split(" ").slice(-2).join(" ");
+    ctx.fillStyle = "#5A6A8A"; ctx.font = "11px Segoe UI"; ctx.textAlign = "right";
+    ctx.fillText(nombre, startX - 6, y + barH / 2 + 4);
+    ctx.fillStyle = "#f0f4fb";
+    ctx.fillRect(startX, y, chartW, barH);
+    ctx.fillStyle = d.total_puntos === 0 ? "#E63946" : "#003DA5";
+    ctx.fillRect(startX, y, barW, barH);
+    ctx.fillStyle = barW > 35 ? "#fff" : "#333";
+    ctx.textAlign = barW > 35 ? "right" : "left";
+    ctx.fillText(d.total_puntos.toFixed(1), startX + barW + (barW > 35 ? -4 : 4), y + barH / 2 + 4);
+  });
+  if (metaDiaria > 0) {
+    const mx = startX + (metaDiaria / maxVal) * chartW;
+    ctx.strokeStyle = "#F5A623"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, H); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#F5A623"; ctx.font = "10px Segoe UI"; ctx.textAlign = "center";
+    ctx.fillText("Meta", mx, H - 2);
+  }
+}
+
+function dibujarLinea(canvas, data) {
+  if (!canvas || !data.length) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const maxVal = Math.max(...data.map(d => d.total), 1);
+  const n = data.length;
+  const padL = 44, padR = 10, padT = 15, padB = 22;
+  const cW = W - padL - padR, cH = H - padT - padB;
+  // grid
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + cH * (1 - i / 4);
+    ctx.strokeStyle = "#e8eef8"; ctx.lineWidth = 1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillStyle = "#aaa"; ctx.font = "9px Segoe UI"; ctx.textAlign = "right";
+    ctx.fillText(Math.round(maxVal * i / 4), padL - 4, y + 3);
+  }
+  const pts = data.map((d, i) => ({
+    x: padL + (n > 1 ? (i / (n - 1)) * cW : cW / 2),
+    y: padT + cH * (1 - d.total / maxVal)
+  }));
+  // area
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, padT + cH);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length - 1].x, padT + cH);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(0,61,165,.07)"; ctx.fill();
+  // line
+  ctx.beginPath(); ctx.strokeStyle = "#003DA5"; ctx.lineWidth = 2.5; ctx.setLineDash([]);
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+  // dots
+  pts.forEach((p, i) => {
+    if (data[i].total > 0) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#003DA5"; ctx.fill();
+    }
+  });
+  // x labels
+  ctx.fillStyle = "#aaa"; ctx.font = "9px Segoe UI"; ctx.textAlign = "center";
+  data.forEach((d, i) => {
+    if (i % 5 === 0 || i === n - 1) {
+      ctx.fillText(d.fecha.slice(5), pts[i].x, H - 4);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ASESOR
+// ═══════════════════════════════════════════════════════════════════
+function montarAsesor() {
+  const body = document.getElementById("app-body");
+  body.innerHTML = `
+    <div style="max-width:520px;margin:0 auto;padding:20px">
+      <div class="card-azul" id="a-card-azul">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div class="pts-label">Puntos hoy</div>
+            <div class="pts-valor" id="a-pts">0.0 pts</div>
+            <div class="pts-equipo">Equipo: ${USUARIO.equipo||"—"}</div>
+          </div>
+          <div id="a-timing-badge" style="background:rgba(255,255,255,.2);border-radius:8px;padding:6px 12px;text-align:center;display:none">
+            <div style="font-size:9px;opacity:.8">TIMING HOY</div>
+            <div id="a-timing-emoji" style="font-size:18px">—</div>
+          </div>
+        </div>
+        <!-- Meta diaria -->
+        <div class="meta-bar-wrap" style="margin-top:12px"><div class="meta-bar-fill" id="a-meta-fill" style="width:0%"></div></div>
+        <div class="meta-label"><span id="a-meta-txt">El supervisor aún no ha colocado meta del día</span><span id="a-meta-pct"></span></div>
+        <!-- Meta mensual -->
+        <div id="a-meta-mes-wrap" style="display:none">
+          <div class="meta-mes-wrap"><div class="meta-mes-fill" id="a-meta-mes-fill" style="width:0%"></div></div>
+          <div class="meta-label"><span id="a-meta-mes-txt"></span><span id="a-meta-mes-pct"></span></div>
+        </div>
+      </div>
+
+      <div class="timing-mini-grid" id="a-timing-grid" style="display:none">
+        <div class="timing-mini gris" id="a-tm-personal">
+          <div class="timing-mini-label">Timing Personal</div>
+          <div class="timing-mini-valor">—</div>
+          <div class="timing-mini-sub">Configura meta</div>
+        </div>
+        <div class="timing-mini gris" id="a-tm-equipo">
+          <div class="timing-mini-label">Timing Equipo</div>
+          <div class="timing-mini-valor">—</div>
+          <div class="timing-mini-sub">Configura meta</div>
+        </div>
+      </div>
+
+      <div class="badges" id="a-badges"></div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="sec-title" style="margin:0">Registrar Venta — Proactivas</div>
+          <button onclick="activarCompacto()" style="font-size:11px;background:none;border:1px solid var(--gris-borde);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--texto2)">🔲 Compacto</button>
+        </div>
+        <div class="campana-grid" id="a-btns-pro"></div>
+        <div class="sec-title" style="margin-top:14px">Reactivas / Activaciones</div>
+        <div class="campana-grid2" id="a-btns-rea"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="sec-title" style="margin:0">Historial de Hoy</div>
+          <button class="btn btn-danger btn-sm" id="a-btn-anular">✖ Anular seleccionada</button>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Hora</th><th>Campaña</th><th>Monto</th><th>Puntos</th>
+            </tr></thead>
+            <tbody id="a-tabla"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Botones proactivas
+  PROACTIVAS.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "btn-campana";
+    btn.style.background = COLORES[c];
+    btn.textContent = c;
+    btn.onclick = () => registrarVentaAsesor(c);
+    document.getElementById("a-btns-pro").appendChild(btn);
+  });
+
+  // Botones reactivas
+  REACTIVAS.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "btn-campana";
+    btn.style.background = COLORES[c];
+    btn.textContent = c;
+    btn.onclick = () => registrarVentaAsesor(c);
+    document.getElementById("a-btns-rea").appendChild(btn);
+  });
+
+  let ventaSeleccionada = null;
+  document.getElementById("a-tabla").addEventListener("click", e => {
+    const tr = e.target.closest("tr");
+    if (!tr) return;
+    document.querySelectorAll("#a-tabla tr").forEach(r => r.style.outline="");
+    tr.style.outline = "2px solid #003DA5";
+    ventaSeleccionada = tr.dataset.id;
+  });
+
+  document.getElementById("a-btn-anular").onclick = async () => {
+    if (!ventaSeleccionada) { flash("Selecciona una venta primero","error"); return; }
+    if (!confirm("¿Anular esta venta?")) return;
+    try {
+      await api("/ventas/anular","POST",{venta_id: +ventaSeleccionada});
+      flash("Venta anulada","ok");
+      ventaSeleccionada = null;
+      await actualizarAsesor();
+    } catch(e) { flash(e.message,"error"); }
+  };
+
+  actualizarAsesor();
+  _timerRefresh = setInterval(actualizarAsesor, 8000);
+}
+
+async function actualizarAsesor() {
+  try {
+    const [resumen, ventas] = await Promise.all([
+      api(`/resumen/asesor/${USUARIO.matricula}`),
+      api(`/ventas/asesor/${USUARIO.matricula}`)
+    ]);
+
+    const pts = resumen.total_puntos;
+    document.getElementById("a-pts").textContent = pts.toFixed(1) + " pts";
+    actualizarCompacto(pts, ventas.length ? ventas[ventas.length-1]?.campana : null);
+
+    // Metas (diaria + mensual)
+    const hoy = fechaHoy();
+    const mes = hoy.slice(0, 7);
+    const supMat = USUARIO.supervisor || USUARIO.matricula;
+    try {
+      const [metaD, metaM] = await Promise.all([
+        api(`/metas/${supMat}?tipo=diaria&fecha=${hoy}`),
+        api(`/metas/${supMat}?tipo=mensual&fecha=${mes}`)
+      ]);
+
+      const timingGrid = document.getElementById("a-timing-grid");
+      const tmPers     = document.getElementById("a-tm-personal");
+      const tmEquipo   = document.getElementById("a-tm-equipo");
+      const timBadge   = document.getElementById("a-timing-badge");
+      const timEmoji   = document.getElementById("a-timing-emoji");
+      let hayMeta = false;
+
+      // ── Meta diaria ──────────────────────────────────────────
+      if (metaD && metaD.valor > 0) {
+        hayMeta = true;
+        const pct = Math.min(100, (pts / metaD.valor) * 100);
+        const enTiming = pts >= metaD.valor;
+        const fillEl = document.getElementById("a-meta-fill");
+        const txtEl  = document.getElementById("a-meta-txt");
+        const pctEl  = document.getElementById("a-meta-pct");
+        if (fillEl) fillEl.style.width = pct.toFixed(0) + "%";
+        if (txtEl)  txtEl.textContent  = `Meta del día: ${metaD.valor} pts`;
+        if (pctEl)  pctEl.textContent  = pct.toFixed(0) + "%";
+
+        // Badge timing en la esquina
+        if (timBadge) { timBadge.style.display = "block"; }
+        if (timEmoji) { timEmoji.textContent = enTiming ? "✅" : "⚠️"; }
+
+        // Mini card timing personal
+        if (tmPers) {
+          tmPers.className = "timing-mini " + (enTiming ? "en" : "fuera");
+          tmPers.innerHTML = `
+            <div class="timing-mini-label">Timing Personal</div>
+            <div class="timing-mini-valor">${pct.toFixed(0)}%</div>
+            <div class="timing-mini-sub">${enTiming?"✅ EN TIMING":"⚠️ FUERA"} · ${pts.toFixed(1)}/${metaD.valor} pts</div>
+          `;
+        }
+      }
+
+      // ── Meta mensual ─────────────────────────────────────────
+      if (metaM && metaM.valor > 0) {
+        hayMeta = true;
+        const diasCom = metaM.dias_comerciales || 26;
+        const t = calcularTiming(pts, metaM.valor, diasCom);
+        const pctMes = Math.min(100, (pts / metaM.valor) * 100);
+
+        // Barra meta mensual
+        const mesWrap = document.getElementById("a-meta-mes-wrap");
+        const mesFill = document.getElementById("a-meta-mes-fill");
+        const mesTxt  = document.getElementById("a-meta-mes-txt");
+        const mesPct  = document.getElementById("a-meta-mes-pct");
+        if (mesWrap) mesWrap.style.display = "block";
+        if (mesFill) mesFill.style.width = pctMes.toFixed(0) + "%";
+        if (mesTxt)  mesTxt.textContent  = `Meta del mes: ${metaM.valor} pts`;
+        if (mesPct)  mesPct.textContent  = pctMes.toFixed(0) + "%";
+
+        // Mini card timing equipo (timing mensual del asesor vs su ritmo)
+        if (t && tmEquipo) {
+          tmEquipo.className = "timing-mini " + (t.enTiming ? "en" : "fuera");
+          tmEquipo.innerHTML = `
+            <div class="timing-mini-label">Timing Mensual</div>
+            <div class="timing-mini-valor">${t.porcentajeActual.toFixed(0)}%</div>
+            <div class="timing-mini-sub">${t.enTiming?"✅ EN TIMING":"⚠️ FUERA"} · Día ${t.diasTranscurridos}/${t.diasComerciales}</div>
+          `;
+        }
+      }
+
+      if (hayMeta && timingGrid) timingGrid.style.display = "grid";
+    } catch(err) { console.warn("Meta no disponible:", err.message); }
+
+    // Badges
+    const badgesEl = document.getElementById("a-badges");
+    badgesEl.innerHTML = "";
+    TODAS.forEach(c => {
+      const cnt = resumen[c] || 0;
+      const b = document.createElement("div");
+      b.className = "badge" + (cnt > 0 ? " activo" : "");
+      if (cnt > 0) b.style.background = COLORES[c];
+      b.textContent = `${c}: ${cnt}`;
+      badgesEl.appendChild(b);
+    });
+
+    // Tabla
+    const tbody = document.getElementById("a-tabla");
+    tbody.innerHTML = "";
+    ventas.forEach(v => {
+      const tr = document.createElement("tr");
+      tr.dataset.id = v.id;
+      if (v.estado === "anulado") tr.className = "anulado";
+      const camp = v.estado==="anulado" ? `✖ ${v.campana}` : v.campana;
+      tr.innerHTML = `
+        <td>${v.id}</td>
+        <td>${v.hora}</td>
+        <td><b style="color:${COLORES[v.campana]||'#333'}">${camp}</b></td>
+        <td>${v.monto > 0 ? "S/"+v.monto.toLocaleString() : "—"}</td>
+        <td>${v.puntos.toFixed(1)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e) {
+    console.error("Error al actualizar:", e);
+  }
+}
+
+let _pendingCampana = null;
+function registrarVentaAsesor(campana) {
+  if (CON_MONTO.includes(campana)) {
+    _pendingCampana = campana;
+    document.getElementById("modal-titulo").textContent = `${campana} — Ingresa el monto (S/)`;
+    document.getElementById("modal-monto-inp").value = "";
+    document.getElementById("modal-monto").classList.remove("hidden");
+    document.getElementById("modal-monto-inp").focus();
+  } else {
+    enviarVenta(campana, 0);
+  }
+}
+
+document.getElementById("modal-cancelar").onclick = () => {
+  document.getElementById("modal-monto").classList.add("hidden");
+  _pendingCampana = null;
+};
+document.getElementById("modal-confirmar").onclick = () => {
+  const monto = parseFloat(document.getElementById("modal-monto-inp").value) || 0;
+  document.getElementById("modal-monto").classList.add("hidden");
+  if (_pendingCampana) enviarVenta(_pendingCampana, monto);
+};
+document.getElementById("modal-monto-inp").addEventListener("keydown", e => {
+  if (e.key==="Enter") document.getElementById("modal-confirmar").click();
+});
+
+async function enviarVenta(campana, monto) {
+  try {
+    const res = await api("/ventas/registrar","POST",{
+      matricula: USUARIO.matricula, campana, monto
+    });
+    let msg = `✅ ${campana} registrado`;
+    if (res.puntos > 0) msg += ` — +${res.puntos} pts`;
+    else if (campana==="UPG") msg += " (contará al activar)";
+    flash(msg, "ok");
+
+    // ── Actualización inmediata de puntos (sin esperar al servidor) ──
+    const ptsEl = document.getElementById("a-pts");
+    if (ptsEl && res.puntos > 0) {
+      const actual = parseFloat(ptsEl.textContent) || 0;
+      ptsEl.textContent = (actual + res.puntos).toFixed(1) + " pts";
+    }
+
+    // ── Refresco completo desde servidor (pequeño delay para que SQLite guarde) ──
+    setTimeout(actualizarAsesor, 600);
+  } catch(e) { flash(e.message,"error"); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SUPERVISOR
+// ═══════════════════════════════════════════════════════════════════
+function montarSupervisor() {
+  const tabsBar = document.getElementById("tabs-bar");
+  const body    = document.getElementById("app-body");
+
+  tabsBar.innerHTML = `
+    <button class="tab-btn active" data-tab="s-resumen">📊 Resumen</button>
+    <button class="tab-btn" data-tab="s-sinvender">⏱️ Sin Vender</button>
+    <button class="tab-btn" data-tab="s-avance">📈 Avance</button>
+    <button class="tab-btn" data-tab="s-alertas">🔔 Alertas</button>
+    <button class="tab-btn" data-tab="s-historial">📅 Historial</button>
+  `;
+
+  const hoy = fechaHoy();
+  const mes = hoy.slice(0, 7);
+
+  body.innerHTML = `
+    <!-- TAB RESUMEN -->
+    <div class="tab-content active" id="s-resumen" style="max-width:960px;margin:0 auto">
+
+      <!-- Meta + Timing -->
+      <div class="card">
+        <div class="sec-title">🎯 Metas y Timing Comercial</div>
+        <div class="meta-row">
+          <div class="form-group">
+            <label>Meta del día (pts)</label>
+            <input type="number" id="s-meta-dia" min="0" placeholder="Ej: 150" value="">
+          </div>
+          <div class="form-group">
+            <label>Meta del mes (pts)</label>
+            <input type="number" id="s-meta-mes" min="0" placeholder="Ej: 3500" value="">
+          </div>
+          <div class="form-group" style="max-width:100px">
+            <label>Días comerciales</label>
+            <input type="number" id="s-dias-com" min="1" max="31" value="26">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn btn-primary" id="s-guardar-meta">💾 Guardar metas</button>
+          </div>
+        </div>
+        <div id="s-timing-card" class="timing-card sin-meta">
+          <div>
+            <div class="timing-desc">Configura la meta mensual para ver el timing</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="equipo-grid" id="s-cards"></div>
+      <div class="card">
+        <div class="sec-title">Detalle por Asesor — Hoy</div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Asesor</th><th>AMP</th><th>UPG</th><th>PTC</th><th>BT</th>
+              <th>UPG_ACT</th><th>TA</th><th>SPT</th><th>Puntos</th>
+            </tr></thead>
+            <tbody id="s-tabla"></tbody>
+          </table>
+        </div>
+        <div class="totales-bar" id="s-totales">—</div>
+      </div>
+    </div>
+
+    <!-- TAB SIN VENDER -->
+    <div class="tab-content" id="s-sinvender" style="max-width:700px;margin:0 auto">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="sec-title" style="margin:0">⏱️ Asesores por tiempo sin vender</div>
+          <button class="btn btn-primary btn-sm" onclick="cargarSinVender()">🔄 Actualizar</button>
+        </div>
+        <div id="s-sv-lista"><p style="color:var(--texto2);text-align:center;padding:30px">Cargando...</p></div>
+      </div>
+    </div>
+
+    <!-- TAB AVANCE -->
+    <div class="tab-content" id="s-avance" style="max-width:900px;margin:0 auto">
+      <div class="card">
+        <div class="sec-title">📊 Puntos por asesor — Hoy</div>
+        <canvas id="chart-barras" width="860" height="300" style="width:100%;max-width:860px"></canvas>
+      </div>
+      <div class="card">
+        <div class="sec-title">📈 Evolutivo del equipo — Últimos 30 días</div>
+        <canvas id="chart-linea" width="860" height="220" style="width:100%;max-width:860px"></canvas>
+      </div>
+    </div>
+
+    <!-- TAB ALERTAS -->
+    <div class="tab-content" id="s-alertas" style="max-width:700px;margin:0 auto">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="sec-title" style="margin:0">🔔 Alertas en tiempo real — hoy</div>
+          <button class="btn btn-success btn-sm" id="s-marcar-leidas">✓ Marcar leídas</button>
+        </div>
+        <div id="s-notif-lista"><p style="color:var(--texto2);text-align:center;padding:40px">Sin alertas aún...</p></div>
+      </div>
+    </div>
+
+    <!-- TAB HISTORIAL -->
+    <div class="tab-content" id="s-historial" style="max-width:960px;margin:0 auto">
+      <div class="card">
+        <div class="sec-title">Filtrar por período</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <div class="form-group" style="flex:1;min-width:140px;margin:0">
+            <label>Desde</label>
+            <input type="date" id="s-fecha-ini" value="${hoy}">
+          </div>
+          <div class="form-group" style="flex:1;min-width:140px;margin:0">
+            <label>Hasta</label>
+            <input type="date" id="s-fecha-fin" value="${hoy}">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn btn-primary" id="s-btn-historial">Ver historial</button>
+          </div>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Hora</th><th>Asesor</th><th>Campaña</th>
+              <th>Monto</th><th>Puntos</th><th>ID</th><th>Acción</th>
+            </tr></thead>
+            <tbody id="s-hist-tabla"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Cargar metas guardadas
+  (async () => {
+    try {
+      const [md, mm] = await Promise.all([
+        api(`/metas/${USUARIO.matricula}?tipo=diaria&fecha=${hoy}`),
+        api(`/metas/${USUARIO.matricula}?tipo=mensual&fecha=${mes}`)
+      ]);
+      if (md.valor > 0) document.getElementById("s-meta-dia").value = md.valor;
+      if (mm.valor > 0) {
+        document.getElementById("s-meta-mes").value = mm.valor;
+        document.getElementById("s-dias-com").value = mm.dias_comerciales || 26;
+      }
+    } catch {}
+  })();
+
+  // Guardar metas
+  document.getElementById("s-guardar-meta").onclick = async () => {
+    const vd = parseFloat(document.getElementById("s-meta-dia").value) || 0;
+    const vm = parseFloat(document.getElementById("s-meta-mes").value) || 0;
+    const dc = parseInt(document.getElementById("s-dias-com").value) || 26;
+    try {
+      const promises = [];
+      if (vd > 0) promises.push(api("/metas","POST",{matricula_sup:USUARIO.matricula,tipo:"diaria",valor:vd,fecha:hoy,dias_comerciales:dc}));
+      if (vm > 0) promises.push(api("/metas","POST",{matricula_sup:USUARIO.matricula,tipo:"mensual",valor:vm,fecha:mes,dias_comerciales:dc}));
+      await Promise.all(promises);
+      flash("✅ Metas guardadas","ok");
+      cargarResumenSup();
+    } catch(e) { flash(e.message,"error"); }
+  };
+
+  // Tabs
+  tabsBar.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.onclick = () => {
+      tabsBar.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      body.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.add("active");
+      if (btn.dataset.tab==="s-alertas")   cargarNotifSup();
+      if (btn.dataset.tab==="s-sinvender") cargarSinVender();
+      if (btn.dataset.tab==="s-avance")    cargarAvance();
+    };
+  });
+
+  document.getElementById("s-marcar-leidas").onclick = async () => {
+    await api("/notificaciones/marcar-leidas","POST",{matricula_sup:USUARIO.matricula});
+    cargarNotifSup();
+  };
+  document.getElementById("s-btn-historial").onclick = cargarHistorialSup;
+
+  cargarResumenSup();
+  _timerRefresh = setInterval(cargarResumenSup, 15000);
+
+  // Poll notificaciones
+  _timerNotif = setInterval(async () => {
+    try {
+      const nuevas = await api(`/notificaciones/nuevas/${USUARIO.matricula}/${_ultimoNotifId}`);
+      if (nuevas.length > 0) {
+        _ultimoNotifId = nuevas[nuevas.length-1].id;
+        nuevas.forEach(n => {
+          flash(`🔔 ${n.nombre_as.split(" ")[0]} registró ${n.campana} (+${n.puntos} pts)`, "ok");
+        });
+        cargarResumenSup();
+      }
+    } catch {}
+  }, 15000);
+
+  // Auto-refresh sin vender cada 60s
+  setInterval(() => {
+    const svTab = document.getElementById("s-sinvender");
+    if (svTab && svTab.classList.contains("active")) cargarSinVender();
+  }, 60000);
+}
+
+async function cargarResumenSup() {
+  try {
+    const hoy = fechaHoy();
+    const mes  = hoy.slice(0, 7);
+    const data = await api(`/resumen/equipo/${USUARIO.matricula}`);
+    data.sort((a,b)=>b.total_puntos-a.total_puntos);
+
+    // Metas
+    let metaDia = 0, metaMes = 0, diasCom = 26;
+    try {
+      const [md, mm] = await Promise.all([
+        api(`/metas/${USUARIO.matricula}?tipo=diaria&fecha=${hoy}`),
+        api(`/metas/${USUARIO.matricula}?tipo=mensual&fecha=${mes}`)
+      ]);
+      metaDia = md.valor || 0;
+      metaMes = mm.valor || 0;
+      diasCom = mm.dias_comerciales || 26;
+    } catch {}
+
+    // Timing
+    const totalEquipo = data.reduce((s,a)=>s+a.total_puntos,0);
+    const timingEl = document.getElementById("s-timing-card");
+    if (timingEl) {
+      const t = calcularTiming(totalEquipo, metaMes, diasCom);
+      if (t) {
+        const cls = t.enTiming ? "en-timing" : "fuera-timing";
+        const emoji = t.enTiming ? "✅" : "⚠️";
+        const difTxt = t.diferencia >= 0 ? `+${t.diferencia} pts adelantado` : `${t.diferencia} pts por alcanzar`;
+        timingEl.className = `timing-card ${cls}`;
+        timingEl.innerHTML = `
+          <div>
+            <div class="timing-pct">${t.porcentajeActual.toFixed(0)}%</div>
+            <div class="timing-desc">${emoji} ${t.enTiming?"EN TIMING":"FUERA DE TIMING"} · Día comercial ${t.diasTranscurridos}/${t.diasComerciales}</div>
+            <div class="timing-desc">${difTxt}</div>
+          </div>
+          <div class="timing-badge">
+            <div>Esperado</div>
+            <div style="font-size:20px;font-weight:900">${t.timingEsperado} pts</div>
+            <div>Actual: ${totalEquipo.toFixed(1)} pts</div>
+          </div>
+        `;
+      } else {
+        timingEl.className = "timing-card sin-meta";
+        timingEl.innerHTML = `<div><div class="timing-desc">Configura la meta mensual para ver el timing</div></div>`;
+      }
+    }
+
+    // Cards
+    const cardsEl = document.getElementById("s-cards");
+    if (!cardsEl) return;
+    cardsEl.innerHTML = "";
+
+    data.forEach((a, i) => {
+      const card = document.createElement("div");
+      const sinVentas = a.total_puntos === 0;
+      card.className = "equipo-card" + (sinVentas ? " sin-ventas" : "");
+      if (i === 0 && !sinVentas) card.style.borderColor = "#00A86B";
+      const det = TODAS.filter(c=>a[c]>0).map(c=>`${c}:${a[c]}`).join(" · ") || "Sin ventas";
+
+      // Meta diaria progress
+      let metaHtml = "";
+      if (metaDia > 0) {
+        const pct = Math.min(100, (a.total_puntos / metaDia) * 100);
+        metaHtml = `
+          <div style="background:rgba(0,0,0,.08);border-radius:10px;height:5px;margin-top:6px;overflow:hidden">
+            <div style="width:${pct.toFixed(0)}%;height:100%;background:${sinVentas?'#E63946':'#003DA5'};border-radius:10px"></div>
+          </div>
+          <div style="font-size:10px;opacity:.7;margin-top:2px">${pct.toFixed(0)}% meta día</div>`;
+      }
+
+      card.innerHTML = `
+        <div class="ec-nombre">${a.nombre.split(" ").slice(-2).join(" ")}</div>
+        <div class="ec-pts">${a.total_puntos.toFixed(1)} <span style="font-size:13px;color:var(--texto2)">pts</span></div>
+        <div class="ec-detalle">${det}</div>
+        ${metaHtml}
+      `;
+      cardsEl.appendChild(card);
+    });
+
+    // Tabla
+    const tbody = document.getElementById("s-tabla");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    const sinVenta = data.filter(a=>a.total_puntos===0);
+
+    data.forEach((a, i) => {
+      const tr = document.createElement("tr");
+      if (i === 0 && a.total_puntos > 0) tr.className = "lider-row";
+      else if (a.total_puntos === 0) tr.className = "row-sin-venta";
+      tr.innerHTML = `
+        <td style="text-align:left;font-weight:600">${a.nombre.split(" ").slice(-2).join(" ")}</td>
+        <td>${a.AMP||0}</td><td>${a.UPG||0}</td><td>${a.PTC||0}</td><td>${a.BT||0}</td>
+        <td>${a.UPG_ACT||0}</td><td>${a.TA||0}</td><td>${a.SPT||0}</td>
+        <td><b>${a.total_puntos.toFixed(1)}</b></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Totales
+    const tot = data.reduce((acc,a)=>({pts:acc.pts+a.total_puntos,v:acc.v+(a.AMP+a.UPG+a.PTC+a.BT+a.UPG_ACT)}),{pts:0,v:0});
+    const totEl = document.getElementById("s-totales");
+    if (totEl) totEl.innerHTML = `
+      <b>Total equipo: ${tot.pts.toFixed(1)} pts</b>
+      <span>•</span><span>${tot.v} ventas</span>
+      <span>•</span><span>${sinVenta.length} sin venta</span>
+      ${metaDia>0?`<span>•</span><span>Meta día: ${metaDia} pts</span>`:""}
+    `;
+  } catch(e) { console.error(e); }
+}
+
+async function cargarNotifSup() {
+  try {
+    const notifs = await api(`/notificaciones/${USUARIO.matricula}`);
+    const el = document.getElementById("s-notif-lista");
+    if (!el) return;
+    if (!notifs.length) {
+      el.innerHTML = `<p style="color:var(--texto2);text-align:center;padding:40px">Sin alertas aún...</p>`;
+      return;
+    }
+    el.innerHTML = "";
+    _ultimoNotifId = Math.max(...notifs.map(n=>n.id));
+    notifs.forEach(n => {
+      const div = document.createElement("div");
+      div.className = "notif-card" + (n.leida ? " leida" : "");
+      div.innerHTML = `
+        <div class="notif-hora">${n.hora} · ${n.fecha}</div>
+        <div class="notif-nombre">${n.nombre_as}</div>
+        <span class="notif-campana" style="background:${COLORES[n.campana]||'#333'}">${n.campana}</span>
+        ${n.puntos>0?`<span style="margin-left:8px;font-size:13px;font-weight:700">+${n.puntos} pts</span>`:""}
+      `;
+      el.appendChild(div);
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function cargarHistorialSup() {
+  const fi = document.getElementById("s-fecha-ini").value;
+  const ff = document.getElementById("s-fecha-fin").value;
+  if (!fi || !ff) { flash("Selecciona las fechas","error"); return; }
+  try {
+    const data = await api(`/historial/equipo/${USUARIO.matricula}?fecha_ini=${fi}&fecha_fin=${ff}`);
+    const tbody = document.getElementById("s-hist-tabla");
+    tbody.innerHTML = "";
+    data.forEach(v => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${v.fecha}</td>
+        <td>${v.hora}</td>
+        <td style="text-align:left">${v.nombre.split(" ").slice(-2).join(" ")}</td>
+        <td><b style="color:${COLORES[v.campana]||'#333'}">${v.campana}</b></td>
+        <td>${v.monto>0?"S/"+v.monto.toLocaleString():"—"}</td>
+        <td>${v.puntos.toFixed(1)}</td>
+        <td>${v.id}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="anularHistorial(${v.id},this)">Anular</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--texto2);padding:20px">Sin ventas en ese período</td></tr>`;
+    }
+  } catch(e) { flash(e.message,"error"); }
+}
+
+async function cargarSinVender() {
+  try {
+    const data = await api(`/sinvender/${USUARIO.matricula}`);
+    const el = document.getElementById("s-sv-lista");
+    if (!el) return;
+    el.innerHTML = "";
+    const NIVEL_LABEL = { normal:"< 30 min", atencion:"30–60 min", alerta:"1–2 horas", critico:"> 2 horas" };
+    data.forEach(sv => {
+      const horas = Math.floor(sv.minutos / 60);
+      const mins  = sv.minutos % 60;
+      const tiempoTxt = horas > 0 ? `${horas}h ${mins}m` : `${mins} min`;
+      const div = document.createElement("div");
+      div.className = `sv-item ${sv.nivel}`;
+      div.innerHTML = `
+        <div>
+          <div class="sv-nombre">${sv.nombre.split(" ").slice(-2).join(" ")}</div>
+          <div class="sv-detalle">
+            ${sv.ultima_venta ? "Última venta: " + sv.ultima_venta : "Sin ventas hoy"}
+          </div>
+          <span class="sv-nivel-badge sv-${sv.nivel}">${NIVEL_LABEL[sv.nivel]}</span>
+        </div>
+        <div class="sv-tiempo">${tiempoTxt}<small>sin vender</small></div>
+      `;
+      el.appendChild(div);
+    });
+    if (!data.length) el.innerHTML = `<p style="text-align:center;color:var(--texto2);padding:30px">Sin asesores registrados</p>`;
+  } catch(e) { flash(e.message,"error"); }
+}
+
+async function cargarAvance() {
+  try {
+    const hoy = fechaHoy();
+    const mes  = hoy.slice(0, 7);
+    const [resumen, evolutivo, metaD] = await Promise.all([
+      api(`/resumen/equipo/${USUARIO.matricula}`),
+      api(`/evolutivo/${USUARIO.matricula}?dias=30`),
+      api(`/metas/${USUARIO.matricula}?tipo=diaria&fecha=${hoy}`)
+    ]);
+    const canvasBar = document.getElementById("chart-barras");
+    const canvasLin = document.getElementById("chart-linea");
+    if (canvasBar) {
+      canvasBar.height = Math.max(200, resumen.length * 38 + 30);
+      dibujarBarras(canvasBar, resumen.sort((a,b)=>b.total_puntos-a.total_puntos), metaD.valor||0);
+    }
+    if (canvasLin) dibujarLinea(canvasLin, evolutivo);
+  } catch(e) { console.error(e); }
+}
+
+async function anularHistorial(id, btn) {
+  if (!confirm("¿Anular esta venta?")) return;
+  try {
+    await api("/ventas/anular","POST",{venta_id:id});
+    btn.closest("tr").remove();
+    flash("Anulada","ok");
+  } catch(e) { flash(e.message,"error"); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GERENCIA
+// ═══════════════════════════════════════════════════════════════════
+function montarGerencia() {
+  const tabsBar = document.getElementById("tabs-bar");
+  const body    = document.getElementById("app-body");
+
+  tabsBar.innerHTML = `
+    <button class="tab-btn active" data-tab="g-hoy">📊 Hoy</button>
+    <button class="tab-btn" data-tab="g-fecha">📅 Por Fecha</button>
+  `;
+
+  body.innerHTML = `
+    <div class="tab-content active" id="g-hoy" style="max-width:960px;margin:0 auto;padding:20px">
+      <div id="g-equipos"></div>
+    </div>
+    <div class="tab-content" id="g-fecha" style="max-width:960px;margin:0 auto;padding:20px">
+      <div class="card">
+        <div class="form-group">
+          <label>Selecciona fecha</label>
+          <input type="date" id="g-sel-fecha" value="${fechaHoy()}">
+        </div>
+        <button class="btn btn-primary" id="g-btn-fecha">Consultar</button>
+      </div>
+      <div id="g-equipos-fecha"></div>
+    </div>
+  `;
+
+  tabsBar.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.onclick = () => {
+      tabsBar.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      body.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.add("active");
+    };
+  });
+
+  document.getElementById("g-btn-fecha").onclick = () => {
+    const f = document.getElementById("g-sel-fecha").value;
+    cargarGerencia(f, "g-equipos-fecha");
+  };
+
+  cargarGerencia(null, "g-equipos");
+  _timerRefresh = setInterval(()=>cargarGerencia(null,"g-equipos"), 60000);
+}
+
+async function cargarGerencia(fecha, containerId) {
+  try {
+    const url = fecha ? `/resumen/gerencia?fecha=${fecha}` : "/resumen/gerencia";
+    const data = await api(url);
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = "";
+
+    data.sort((a,b)=>b.total_puntos-a.total_puntos);
+
+    data.forEach(eq => {
+      const div = document.createElement("div");
+      div.className = "gerencia-equipo";
+      const asesoresHtml = eq.asesores
+        .sort((a,b)=>b.total_puntos-a.total_puntos)
+        .map((a,i) => `
+          <tr class="${i===0&&a.total_puntos>0?'lider-row':a.total_puntos===0?'sin-venta-row':''}">
+            <td style="text-align:left;padding:8px 16px;font-weight:${i===0?'700':'400'}">${a.nombre.split(" ").slice(-2).join(" ")}</td>
+            <td>${a.AMP||0}</td><td>${a.UPG||0}</td><td>${a.PTC||0}</td><td>${a.BT||0}</td>
+            <td>${a.UPG_ACT||0}</td><td>${a.TA||0}</td><td>${a.SPT||0}</td>
+            <td><b>${a.total_puntos.toFixed(1)}</b></td>
+          </tr>
+        `).join("");
+
+      div.innerHTML = `
+        <div class="gerencia-header">
+          <div>
+            <div class="g-equipo">📋 ${eq.equipo}</div>
+            <div class="g-sup">${eq.supervisor}</div>
+          </div>
+          <div class="g-pts">${eq.total_puntos.toFixed(1)} pts</div>
+        </div>
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th style="text-align:left;padding:8px 16px">Asesor</th>
+              <th>AMP</th><th>UPG</th><th>PTC</th><th>BT</th>
+              <th>UPG_ACT</th><th>TA</th><th>SPT</th><th>Puntos</th>
+            </tr></thead>
+            <tbody>${asesoresHtml}</tbody>
+          </table>
+        </div>
+      `;
+      el.appendChild(div);
+    });
+  } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODERADOR
+// ═══════════════════════════════════════════════════════════════════
+function montarModerador() {
+  const tabsBar = document.getElementById("tabs-bar");
+  const body    = document.getElementById("app-body");
+
+  tabsBar.innerHTML = `
+    <button class="tab-btn active" data-tab="m-gerencia">🏦 Gerencia</button>
+    <button class="tab-btn" data-tab="m-todas">📋 Todas las Ventas</button>
+    <button class="tab-btn" data-tab="m-usuarios">👥 Usuarios</button>
+  `;
+
+  body.innerHTML = `
+    <div class="tab-content active" id="m-gerencia" style="max-width:960px;margin:0 auto;padding:20px">
+      <div id="m-g-equipos"></div>
+    </div>
+    <div class="tab-content" id="m-todas" style="max-width:960px;margin:0 auto;padding:20px">
+      <div class="card">
+        <div class="form-group">
+          <label>Fecha</label>
+          <input type="date" id="m-sel-fecha" value="${fechaHoy()}">
+        </div>
+        <button class="btn btn-primary" id="m-btn-buscar">Ver ventas</button>
+      </div>
+      <div class="card">
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Hora</th><th>Asesor</th><th>Equipo</th>
+              <th>Campaña</th><th>Monto</th><th>Puntos</th><th>Estado</th><th>Acción</th>
+            </tr></thead>
+            <tbody id="m-tabla-ventas"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="tab-content" id="m-usuarios" style="max-width:960px;margin:0 auto;padding:20px">
+      <div class="card">
+        <div class="tabla-wrap">
+          <table>
+            <thead><tr>
+              <th>Matrícula</th><th>Nombre</th><th>Rol</th><th>Equipo</th><th>Supervisor</th>
+            </tr></thead>
+            <tbody id="m-tabla-usuarios"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  tabsBar.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.onclick = () => {
+      tabsBar.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      body.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.add("active");
+      if (btn.dataset.tab==="m-usuarios") cargarUsuarios();
+    };
+  });
+
+  document.getElementById("m-btn-buscar").onclick = () => {
+    const f = document.getElementById("m-sel-fecha").value;
+    cargarTodasVentas(f);
+  };
+
+  cargarGerencia(null, "m-g-equipos");
+  cargarTodasVentas(fechaHoy());
+  _timerRefresh = setInterval(()=>cargarGerencia(null,"m-g-equipos"), 60000);
+}
+
+async function cargarTodasVentas(fecha) {
+  try {
+    const data = await api(`/moderador/ventas?fecha=${fecha}`);
+    const tbody = document.getElementById("m-tabla-ventas");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    data.forEach(v => {
+      const tr = document.createElement("tr");
+      if (v.estado==="anulado") tr.className="anulado";
+      tr.innerHTML = `
+        <td>${v.id}</td>
+        <td>${v.hora}</td>
+        <td style="text-align:left">${v.nombre.split(" ").slice(-2).join(" ")}</td>
+        <td>${v.equipo||"—"}</td>
+        <td><b style="color:${COLORES[v.campana]||'#333'}">${v.campana}</b></td>
+        <td>${v.monto>0?"S/"+v.monto.toLocaleString():"—"}</td>
+        <td>${v.puntos.toFixed(1)}</td>
+        <td>${v.estado}</td>
+        <td>
+          ${v.estado!=="anulado"
+            ? `<button class="btn btn-danger btn-sm" onclick="anularMod(${v.id},this)">Anular</button>`
+            : "—"
+          }
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    if (!data.length) {
+      tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--texto2)">Sin ventas</td></tr>`;
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function anularMod(id, btn) {
+  if (!confirm("¿Anular esta venta?")) return;
+  try {
+    await api("/ventas/anular","POST",{venta_id:id});
+    btn.closest("tr").className="anulado";
+    btn.remove();
+    flash("Anulada","ok");
+  } catch(e) { flash(e.message,"error"); }
+}
+
+async function cargarUsuarios() {
+  try {
+    const data = await api("/moderador/usuarios");
+    const tbody = document.getElementById("m-tabla-usuarios");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    data.forEach(u => {
+      const tr = document.createElement("tr");
+      const rolColor = {moderador:"#003DA5",gerente:"#7B2D8B",supervisor:"#00A86B",asesor:"#5A6A8A"}[u.rol]||"#333";
+      tr.innerHTML = `
+        <td><b>${u.matricula}</b></td>
+        <td style="text-align:left">${u.nombre}</td>
+        <td><span style="background:${rolColor};color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700">${u.rol}</span></td>
+        <td>${u.equipo||"—"}</td>
+        <td>${u.supervisor||"—"}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch(e) { console.error(e); }
+}
+</script>
+</body>
+</html>
